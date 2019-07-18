@@ -20,7 +20,7 @@ function count(src, opts, cb) {
         };
 
     src.fs.readdir(src.name, function(err, list) {
-        if ((err && err.code === 'ENOTDIR') || (!list || !list.length)) return countFile(); // Single file
+        if (err && err.code === 'ENOTDIR') return countFile(); // Single file
         if (err) return cb(err);
 
         var pending = list.length;
@@ -40,7 +40,7 @@ function count(src, opts, cb) {
                         if (err) return cb(err);
                         if (!--pending) cb(null, totalStats);
                     });
-                } else {
+                } else if (st && st.isFile()) {
                     totalStats.files++;
                     if (st) totalStats.bytes += st.size;
                     if (!--pending) cb(null, totalStats);
@@ -60,8 +60,12 @@ function count(src, opts, cb) {
         // src === a single file, just count that
         stat(src.fs, src.name, function(err, st) {
             if (err) return cb(err);
-            totalStats.files++;
-            totalStats.bytes += st.size;
+            if (st.isDirectory()) {
+                totalStats.dirs++;
+            } else if (st.isFile()) {
+                totalStats.files++;
+                totalStats.bytes += st.size;
+            }
             cb(null, totalStats);
         });
     }
